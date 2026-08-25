@@ -58,7 +58,7 @@ func Watch(ctx context.Context, opts Options, embedder llm.Embedder, store vecto
 			logger.Printf("move %s to processed: %v", filepath.Base(path), err)
 			return
 		}
-		logger.Printf("ingested %s", filepath.Base(path))
+		logger.Printf("ingested %s \n", filepath.Base(path))
 	}
 
 	entries, err := os.ReadDir(opts.SourceDir)
