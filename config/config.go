@@ -16,6 +16,9 @@ type Config struct {
 	EmbeddingDim     int
 	EmbeddingBaseURL string
 	EmbeddingAPIKey  string
+	EmbeddingModel   string
+	IngestDir        string
+	ProcessDir       string
 }
 
 func Load() Config {
@@ -30,6 +33,9 @@ func Load() Config {
 		EmbeddingDim:     atoiOr(os.Getenv("EMBEDDING_DIM"), 0),
 		EmbeddingBaseURL: os.Getenv("EMBEDDING_BASE_URL"),
 		EmbeddingAPIKey:  os.Getenv("EMBEDDING_API_KEY"),
+		EmbeddingModel:   os.Getenv("EMBEDDING_MODEL"),
+		IngestDir:        os.Getenv("INGEST_DIR"),
+		ProcessDir:       os.Getenv("PROCESS_DIR"),
 	}
 
 	if cfg.BaseURL == "" {
@@ -49,6 +55,18 @@ func Load() Config {
 		if cfg.EmbeddingAPIKey == "" {
 			cfg.EmbeddingAPIKey = cfg.APIKey
 		}
+	}
+
+	if cfg.EmbeddingModel == "" {
+		cfg.EmbeddingModel = "nomic-embed-text"
+	}
+
+	if cfg.IngestDir == "" {
+		cfg.IngestDir = "./documents"
+	}
+
+	if cfg.ProcessDir == "" {
+		cfg.ProcessDir = "./documents/processed"
 	}
 
 	return cfg
