@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"rag/llm"
+	"rag/rag"
 	"strings"
 	"sync"
 	"time"
@@ -17,7 +18,7 @@ type Options struct {
 	SystemPromptFile string
 }
 
-func RunREPL(ctx context.Context, client *llm.Client, opts Options) error {
+func RunREPL(ctx context.Context, client *llm.Client, retriever *rag.Retriever, opts Options) error {
 	in := bufio.NewScanner(os.Stdin)
 	in.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 
@@ -48,11 +49,20 @@ func RunREPL(ctx context.Context, client *llm.Client, opts Options) error {
 		}
 
 		history = append(history, llm.Message{Role: "user", Content: input})
-
 		spin := startSpinner("thinking")
 		var stopOnce sync.Once
+		turn := history
 
-		reply, err := client.ChatStream(ctx, history, func(s string) {
+		if retriever != nil {
+			contextText, retErr := retriever.Retrieve(ctx, history)
+			if retErr != nil {
+				fmt.Fprintln(os.Stderr, "retrieval error: ", retErr)
+			} else if contextText != "" {
+				turn = withInlineContext(history, contextText)
+			}
+		}
+
+		reply, err := client.ChatStream(ctx, turn, func(s string) {
 			stopOnce.Do(spin.Stop)
 			fmt.Print(s)
 		})
@@ -68,6 +78,26 @@ func RunREPL(ctx context.Context, client *llm.Client, opts Options) error {
 
 		history = append(history, reply)
 	}
+}
+
+func withInlineContext(history []llm.Message, contextText string) []llm.Message {
+	if len(history) == 0 || contextText == "" {
+		return history
+	}
+
+	last := history[len(history)-1]
+	if last.Role != "user" {
+		return history
+	}
+
+	out := make([]llm.Message, len(history))
+	copy(out, history)
+	out[len(out)-1] = llm.Message{
+		Role:    "user",
+		Content: contextText + "\n\n--- Question --- \n" + last.Content,
+	}
+
+	return out
 }
 
 func seedHistory(path string) ([]llm.Message, error) {
