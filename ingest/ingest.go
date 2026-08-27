@@ -21,7 +21,7 @@ const (
 type Options struct {
 	SourceDir    string
 	ProcessedDir string
-	ChinkSize    int
+	ChunkSize    int
 	ChunkOveralp int
 }
 
@@ -54,7 +54,7 @@ func ProcessContent(ctx context.Context, source string, content []byte, opts Opt
 		return 0, fmt.Errorf("unsupported format: %s", filepath.Ext(base))
 	}
 
-	size := opts.ChinkSize
+	size := opts.ChunkSize
 	if size <= 0 {
 		size = defaultChunkSize
 	}
