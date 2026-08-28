@@ -66,7 +66,7 @@ func (r *Retriever) Retrieve(ctx context.Context, history []llm.Message) (string
 func (r *Retriever) buildQuery(ctx context.Context, history []llm.Message) string {
 
 	if r.rewriter != nil {
-		if q, err := r.rewriter.Rewrite(ctx, history); err != nil && q != "" {
+		if q, err := r.rewriter.Rewrite(ctx, history); err == nil && q != "" {
 			return q
 		}
 	}

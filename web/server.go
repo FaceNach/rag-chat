@@ -97,6 +97,7 @@ func (s *Server) Routes() http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Recoverer)
+	r.Get("/", s.handleHome)
 	r.Get("/chat", s.handleChatPage)
 	r.Post("/api/chat/stream", s.handleChatStream)
 	r.Post("/api/upload", s.handleUpload)
@@ -110,6 +111,10 @@ func (s *Server) Routes() http.Handler {
 	}
 
 	return r
+}
+
+func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/chat", http.StatusFound)
 }
 
 type chatRequest struct {
@@ -136,6 +141,7 @@ func (s *Server) handleUploadImage(w http.ResponseWriter, r *http.Request) {
 	description := strings.TrimSpace(r.FormValue("description"))
 	if description == "" {
 		http.Error(w, "description is required", http.StatusBadRequest)
+		return
 	}
 
 	file, header, err := r.FormFile("image")
@@ -148,7 +154,7 @@ func (s *Server) handleUploadImage(w http.ResponseWriter, r *http.Request) {
 
 	original := filepath.Base(header.Filename)
 	if !ingest.IsImage(original) {
-		http.Error(w, "unsupported image format (allowed: .png, .jpg, .jpge, .webp, .gif)", http.StatusUnsupportedMediaType)
+		http.Error(w, "unsupported image format (allowed: .png, .jpg, .jpeg, .webp, .gif)", http.StatusUnsupportedMediaType)
 		return
 	}
 
@@ -160,7 +166,7 @@ func (s *Server) handleUploadImage(w http.ResponseWriter, r *http.Request) {
 
 	saved := fmt.Sprintf("%d-%s", time.Now().UnixNano(), safeFileName(original))
 
-	if err := os.Mkdir(s.imagesDir, 0o755); err != nil {
+	if err := os.MkdirAll(s.imagesDir, 0o755); err != nil {
 		http.Error(w, "mkdir images dir: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -195,7 +201,7 @@ func safeFileName(name string) string {
 		switch {
 		case r >= 'a' && r <= 'z',
 			r >= 'A' && r <= 'Z',
-			r >= '0' && r <= 9,
+			r >= '0' && r <= '9',
 			r == '.', r == '-', r == '_':
 			sb.WriteRune(r)
 		default:
@@ -261,7 +267,7 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Contenty-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(uploadResponse{
 		Source: name,
 		Bytes:  len(content),
